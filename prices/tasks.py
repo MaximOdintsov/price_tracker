@@ -3,36 +3,45 @@ import json
 from decimal import Decimal
 import websockets
 from asgiref.sync import sync_to_async
-from .models import Price
+from channels.layers import get_channel_layer
 
+# Глобальный словарь для хранения запущенных задач по символу
+running_streams = {}
 
-async def price_stream(symbol="btcusdt", max_messages=None):
-    # Connect to Binance WebSocket and continuously stream prices.
-    # Save each price to DB and broadcast to WebSocket clients.
-    symbol = symbol.lower()
-    url = f"wss://stream.binance.com:9443/ws/{symbol}@ticker"
-    from channels.layers import get_channel_layer
+async def price_stream(symbol):
+    # Выполняем отложенный импорт модели после инициализации приложений Django
+    from prices.models import Price
+
+    url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker"
     channel_layer = get_channel_layer()
     try:
         async with websockets.connect(url) as ws:
-            count = 0
             while True:
                 msg = await ws.recv()
                 data = json.loads(msg)
+                # Берем цену из ключа "c" или "p" (последняя цена)
                 price_str = data.get("c") or data.get("p")
                 if not price_str:
                     continue
                 price_val = Decimal(price_str)
+                # Сохраняем данные в базе (опционально)
                 await sync_to_async(Price.objects.create)(symbol=symbol.upper(), price=price_val)
-                if channel_layer:
-                    group = f"prices_{symbol}"
-                    await channel_layer.group_send(group, {
+                # Рассылаем данные в группу, соответствующую символу
+                await channel_layer.group_send(
+                    f"prices_{symbol.upper()}",
+                    {
                         "type": "send_price",
-                        "price": price_str
-                    })
-                if max_messages:
-                    count += 1
-                    if count >= max_messages:
-                        break
+                        "price": price_str,
+                    }
+                )
     except Exception as e:
-        print(f"Error in price_stream: {e}")
+        print(f"Error in price_stream for {symbol}: {e}")
+        # Если произошла ошибка, удаляем задачу, чтобы при следующем подключении можно было её перезапустить
+        running_streams.pop(symbol.upper(), None)
+
+async def start_stream_for_symbol(symbol):
+    symbol_upper = symbol.upper()
+    # Если задача для этого символа ещё не запущена, создаем её
+    if symbol_upper not in running_streams:
+        task = asyncio.create_task(price_stream(symbol))
+        running_streams[symbol_upper] = task

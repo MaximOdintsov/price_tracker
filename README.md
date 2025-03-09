@@ -1,2 +1,15 @@
-Запуск сокета: 
-docker compose exec web python -c "import django; django.setup(); import asyncio; from prices import tasks; asyncio.run(tasks.price_stream())"
+## Установка и запуск
+
+### Предварительные условия
+- Docker и Docker Compose установлены на вашей машине.
+
+### Шаги для запуска
+
+1. **Склонируйте репозиторий или скопируйте файлы проекта.**
+
+2. **Настройка переменных окружения:**  
+   В файле `docker-compose.yaml` можно задать параметры подключения к базе данных и другие переменные (например, `SECRET_KEY`, `DEBUG`).
+
+3. **Сборка и запуск контейнеров:**
+   ```bash
+   docker compose up --build -d
