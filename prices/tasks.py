@@ -8,6 +8,7 @@ from channels.layers import get_channel_layer
 # Глобальный словарь для хранения запущенных задач по символу
 running_streams = {}
 
+
 async def price_stream(symbol):
     # Выполняем отложенный импорт модели после инициализации приложений Django
     from prices.models import Price
@@ -38,6 +39,7 @@ async def price_stream(symbol):
         print(f"Error in price_stream for {symbol}: {e}")
         # Если произошла ошибка, удаляем задачу, чтобы при следующем подключении можно было её перезапустить
         running_streams.pop(symbol.upper(), None)
+
 
 async def start_stream_for_symbol(symbol):
     symbol_upper = symbol.upper()

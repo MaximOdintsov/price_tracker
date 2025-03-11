@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>История цен</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center">История цен</h1>
+
+    <!-- Форма для фильтрации -->
+    <form id="filterForm" class="mb-4">
+      <div class="row">
+        <!-- Фильтр по символу -->
+        <div class="col-md-3">
+          <label for="symbol" class="form-label">Символ</label>
+          <select id="symbol" name="symbol" class="form-select">
+            <option value="BTCUSDT" selected>BTC/USDT</option>
+            <option value="ETHUSDT">ETH/USDT</option>
+            <option value="LTCUSDT">LTC/USDT</option>
+            <option value="XRPUSDT">XRP/USDT</option>
+            <option value="BNBUSDT">BNB/USDT</option>
+            <option value="ADAUSDT">ADA/USDT</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="start" class="form-label">Начало периода</label>
+          <input type="datetime-local" id="start" name="start" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label for="end" class="form-label">Конец периода</label>
+          <input type="datetime-local" id="end" name="end" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label for="limit" class="form-label">Количество записей</label>
+          <input type="number" id="limit" name="limit" class="form-control" value="300">
+        </div>
+        <div class="col-md-1 align-self-end">
+          <button type="submit" class="btn btn-primary">Применить</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Таблица для отображения истории цен -->
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Символ</th>
+          <th>Цена</th>
+          <th>Время</th>
+        </tr>
+      </thead>
+      <tbody id="priceHistoryTableBody">
+        <!-- Записи добавятся через JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let socket;
+
+    function connectWebSocket() {
+      if (socket) {
+        socket.close();
+      }
+      const symbol = document.getElementById("symbol").value;
+      const start = document.getElementById("start").value;
+      const end = document.getElementById("end").value;
+      const limit = document.getElementById("limit").value;
+      let wsUrl = 'ws://' + window.location.host + '/ws/price_history/' + symbol + '/?';
+      const params = new URLSearchParams();
+      if (start) params.append("start", new Date(start).toISOString());
+      if (end) params.append("end", new Date(end).toISOString());
+      if (limit) params.append("limit", limit);
+      wsUrl += params.toString();
+
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = function(event) {
+        console.log("Подключено к ws/price_history для", symbol, event);
+      };
+
+      socket.onmessage = function(event) {
+        console.log("Получено сообщение:", event.data);
+        const data = JSON.parse(event.data);
+        const tbody = document.getElementById("priceHistoryTableBody");
+        if (data.history) {
+          tbody.innerHTML = "";
+          data.history.forEach(record => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${record.symbol}</td>
+              <td>${record.price}</td>
+              <td>${record.timestamp}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        }
+        if (data.price) {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${symbol}</td>
+            <td>${data.price}</td>
+            <td>${new Date().toISOString()}</td>
+          `;
+          tbody.insertAdjacentElement('afterbegin', row);
+        }
+      };
+
+      socket.onclose = function(event) {
+        console.log("Соединение закрыто:", event);
+      };
+
+      socket.onerror = function(error) {
+        console.error("Ошибка WebSocket:", error);
+      };
+    }
+
+    // При загрузке страницы устанавливаем соединение
+    connectWebSocket();
+
+    // При отправке формы переподключаемся с новыми параметрами
+    document.getElementById("filterForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      connectWebSocket();
+    });
+  </script>
+</body>
+</html>
