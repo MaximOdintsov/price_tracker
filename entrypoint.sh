@@ -11,4 +11,4 @@ echo "Выполняем миграции..."
 python manage.py migrate
 
 echo "Запуск Daphne..."
-exec daphne -b 0.0.0.0 -p 8000 crypto_project.routing:application
+exec daphne -b 0.0.0.0 -p 8000 price_tracker.routing:application

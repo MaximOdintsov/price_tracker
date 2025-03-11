@@ -1,24 +1,22 @@
 from datetime import timedelta
+from asgiref.sync import async_to_sync
 from django.http import JsonResponse
 from django.utils import timezone
-from django.shortcuts import render
 from django.utils.dateparse import parse_datetime
-from .models import Price
-from asgiref.sync import async_to_sync
+from django.shortcuts import render
+from prices.models import Price
 from prices.tasks import start_stream_for_symbol
 
 
 def price_history(request):
     symbol = request.GET.get("symbol")
     if symbol:
-        # Запускаем стрим, если он ещё не запущен
         async_to_sync(start_stream_for_symbol)(symbol)
 
     qs = Price.objects.all()
     if symbol:
         qs = qs.filter(symbol=symbol.upper())
 
-    # Фильтрация по диапазону времени (начало и конец)
     start_param = request.GET.get("start")
     end_param = request.GET.get("end")
 
@@ -44,7 +42,6 @@ def price_history(request):
 
     qs = qs.filter(timestamp__gte=start_dt, timestamp__lte=end_dt).order_by("-timestamp")
 
-    # Фильтрация по количеству записей
     limit_param = request.GET.get("limit")
     try:
         limit = int(limit_param)
@@ -63,7 +60,31 @@ def price_history(request):
 
 
 def price_history_page(request):
-    return render(request, "prices/price_history.html")
+    symbol = request.GET.get("symbol")
+    initial_history = None
+
+    if symbol:
+        async_to_sync(start_stream_for_symbol)(symbol)
+
+        start_param = request.GET.get("start")
+        end_param = request.GET.get("end")
+        limit_param = request.GET.get("limit")
+        if (not start_param) and (not end_param) and (not limit_param):
+            start_dt = timezone.now() - timedelta(days=1)
+            end_dt = timezone.now()
+            qs = Price.objects.filter(
+                symbol=symbol.upper(),
+                timestamp__gte=start_dt,
+                timestamp__lte=end_dt
+            ).order_by("-timestamp")[:100]
+            initial_history = []
+            for record in qs:
+                initial_history.append({
+                    "symbol": record.symbol,
+                    "price": str(record.price),
+                    "timestamp": record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+                })
+    return render(request, "prices/price_history.html", {"initial_history": initial_history})
 
 
 def index(request):

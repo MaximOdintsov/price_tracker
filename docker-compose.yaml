@@ -21,7 +21,7 @@ services:
     volumes:
       - static_data:/app/static
     environment:
-      DJANGO_SETTINGS_MODULE: "crypto_project.settings"
+      DJANGO_SETTINGS_MODULE: "price_tracker.settings"
       SECRET_KEY: "django-insecure-change-me"
       DEBUG: "0"
       DB_NAME: "crypto_db"

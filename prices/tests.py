@@ -5,7 +5,7 @@ from decimal import Decimal
 from asgiref.sync import async_to_sync
 from channels.testing import WebsocketCommunicator
 from channels.layers import get_channel_layer
-from crypto_project.routing import application
+from price_tracker.routing import application
 from prices import tasks
 from prices.models import Price
 

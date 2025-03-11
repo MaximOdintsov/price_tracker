@@ -5,7 +5,7 @@ from django.core.asgi import get_asgi_application
 import prices.routing
 
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "crypto_project.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "price_tracker.settings")
 django_asgi_app = get_asgi_application()
 
 application = ProtocolTypeRouter({

@@ -1,85 +1,76 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <title>Crypto Price Tracker</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
-</head>
-<body>
-  <div class="container mt-5">
-    <h1 class="text-center">Crypto Price Tracker</h1>
+{% extends "base.html" %}
 
-    <!-- Элемент выбора криптовалютной пары -->
-    <div class="row mb-3">
-      <div class="col-md-4 offset-md-4">
-        <select id="coinSelector" class="form-select">
-          <option value="BTCUSDT" selected>BTC/USDT</option>
-          <option value="ETHUSDT">ETH/USDT</option>
-          <option value="LTCUSDT">LTC/USDT</option>
-          <option value="XRPUSDT">XRP/USDT</option>
-          <option value="BNBUSDT">BNB/USDT</option>
-          <option value="ADAUSDT">ADA/USDT</option>
-          <!-- Добавьте другие пары по необходимости -->
-        </select>
-      </div>
-    </div>
+{% block title %}Crypto Price Tracker{% endblock %}
+{% block content %}
+<h1 class="text-center">Crypto Price Tracker</h1>
 
-    <div class="card">
-      <div class="card-body text-center">
-        <h2 id="price" class="display-4">--</h2>
-        <p class="text-muted" id="updated">Waiting for price update...</p>
-      </div>
-    </div>
+<!-- Элемент выбора криптовалютной пары -->
+<div class="row mb-3">
+  <div class="col-md-4 offset-md-4">
+    <select id="coinSelector" class="form-select">
+      <option value="BTCUSDT" selected>BTC/USDT</option>
+      <option value="ETHUSDT">ETH/USDT</option>
+      <option value="LTCUSDT">LTC/USDT</option>
+      <option value="XRPUSDT">XRP/USDT</option>
+      <option value="BNBUSDT">BNB/USDT</option>
+      <option value="ADAUSDT">ADA/USDT</option>
+      <!-- Добавьте другие пары по необходимости -->
+    </select>
   </div>
+</div>
 
-  <script>
-    let socket;
+<div class="card">
+  <div class="card-body text-center">
+    <h2 id="price" class="display-4">--</h2>
+    <p class="text-muted" id="updated">Waiting for price update...</p>
+  </div>
+</div>
+</div>
 
-    function connectWebSocket(symbol) {
-      if (socket) {
-        socket.close();
+<script>
+let socket;
+
+function connectWebSocket(symbol) {
+  if (socket) {
+    socket.close();
+  }
+  const wsUrl = 'ws://' + window.location.host + '/ws/prices/' + symbol + '/';
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = function(event) {
+    console.log("WebSocket connection opened for", symbol, event);
+  };
+
+  socket.onmessage = function(event) {
+    console.log("Received message:", event.data);
+    try {
+      const data = JSON.parse(event.data);
+      if (data.price) {
+        document.getElementById('price').textContent = data.price;
+        document.getElementById('updated').textContent =
+          "Updated at: " + new Date().toLocaleTimeString();
       }
-      const wsUrl = 'ws://' + window.location.host + '/ws/prices/' + symbol + '/';
-      socket = new WebSocket(wsUrl);
-
-      socket.onopen = function(event) {
-        console.log("WebSocket connection opened for", symbol, event);
-      };
-
-      socket.onmessage = function(event) {
-        console.log("Received message:", event.data);
-        try {
-          const data = JSON.parse(event.data);
-          if (data.price) {
-            document.getElementById('price').textContent = data.price;
-            document.getElementById('updated').textContent =
-              "Updated at: " + new Date().toLocaleTimeString();
-          }
-        } catch (e) {
-          console.error("Error parsing message:", e);
-        }
-      };
-
-      socket.onclose = function(event) {
-        console.log("WebSocket connection closed:", event);
-      };
-
-      socket.onerror = function(error) {
-        console.error("WebSocket error observed:", error);
-      };
+    } catch (e) {
+      console.error("Error parsing message:", e);
     }
+  };
 
-    // Изначально подключаемся к выбранной паре
-    const coinSelector = document.getElementById('coinSelector');
-    connectWebSocket(coinSelector.value);
+  socket.onclose = function(event) {
+    console.log("WebSocket connection closed:", event);
+  };
 
-    // При изменении выбора переподключаемся
-    coinSelector.addEventListener('change', function() {
-      connectWebSocket(this.value);
-    });
-  </script>
-</body>
-</html>
+  socket.onerror = function(error) {
+    console.error("WebSocket error observed:", error);
+  };
+}
+
+// Изначально подключаемся к выбранной паре
+const coinSelector = document.getElementById('coinSelector');
+connectWebSocket(coinSelector.value);
+
+// При изменении выбора переподключаемся
+coinSelector.addEventListener('change', function() {
+  connectWebSocket(this.value);
+});
+</script>
+{% endblock %}

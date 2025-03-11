@@ -28,7 +28,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "crypto_project.urls"
+ROOT_URLCONF = "price_tracker.urls"
 
 TEMPLATES = [
     {
@@ -46,8 +46,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "crypto_project.wsgi.application"
-ASGI_APPLICATION = "crypto_project.routing.application"
+WSGI_APPLICATION = "price_tracker.wsgi.application"
+ASGI_APPLICATION = "price_tracker.routing.application"
 
 DATABASES = {
     "default": {
